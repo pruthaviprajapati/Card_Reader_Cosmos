@@ -60,7 +60,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .content{flex:1;overflow-y:auto;padding:20px 22px}
 
 /* ── AUTH GATE (login / register) ── */
-.auth-gate{position:fixed;inset:0;z-index:2000;background:radial-gradient(1200px 600px at 50% -10%,rgba(47,107,255,.12),transparent),linear-gradient(160deg,#0b1220,#0a1830);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.auth-gate{position:fixed;inset:0;top:0;left:0;right:0;bottom:0;z-index:2000;background:radial-gradient(1200px 600px at 50% -10%,rgba(47,107,255,.12),transparent),linear-gradient(160deg,#0b1220,#0a1830);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
 .auth-card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r2);padding:32px 28px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
 .auth-brand{text-align:center;margin-bottom:24px}
 .auth-brand .bn{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--w1)}
@@ -346,7 +346,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 <div id="toasts"></div>
 
 <!-- ═══ AUTH GATE ═══ -->
-<div class="auth-gate" id="authGate" style="display:none">
+<div class="auth-gate" id="authGate" style="display:flex">
   <div class="auth-card">
     <div class="auth-brand">
       <div class="bn">COSMOS <span>IMPEX</span></div>
@@ -880,13 +880,16 @@ if (saved && saved !== DEV_BACKEND) {
 let AUTH_TOKEN = localStorage.getItem('cosmos_auth_token') || null;
 const DEMO_EMAIL    = 'admin@cosmos.local';
 const DEMO_PASSWORD = 'abcd';  
-// Downscale a large image (phone photo) to ~1600px JPEG before upload, so it
-// fits under the vision-API size limit and the model is used instead of OCR
-// fallback. PDFs and already-small images pass through unchanged.
+// Convert any image to a ~1600px JPEG before upload. This (a) keeps phone photos
+// under the vision-API size limit, and (b) converts iPhone HEIC photos to JPEG —
+// the backend only accepts jpeg/png/webp, so an unconverted HEIC was rejected as
+// "Unsupported file type" (the reason iOS uploads failed). PDFs and already-small
+// JPEGs pass through unchanged. Safari can decode HEIC into the canvas.
 async function downscaleImage(file, maxDim = 1600, quality = 0.85) {
   try {
-    if (!file || !file.type || !file.type.startsWith('image/')) return file;
-    if (file.size <= 2.5 * 1024 * 1024) return file; // already small enough
+    if (!file || !file.type || !file.type.startsWith('image/')) return file; // e.g. PDF
+    // Only skip conversion for images that are ALREADY small JPEGs.
+    if (file.type === 'image/jpeg' && file.size <= 2.5 * 1024 * 1024) return file;
     const dataUrl = await new Promise((res, rej) => {
       const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file);
     });
@@ -2405,8 +2408,17 @@ async function init() {
   console.log('%cCosmos Impex — Lead Intelligence', 'color:#2f6bff;font-weight:bold;font-size:14px');
 }
 
-if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
-else init();
+// The gate is visible by default, so even if init() fails (e.g. an iOS-specific
+// runtime error), the user still sees a usable login screen instead of a blank
+// page. Always surface failures rather than letting them white-screen.
+function boot() {
+  Promise.resolve().then(init).catch(e => {
+    console.error('init failed:', e);
+    try { showAuthGate(); switchAuthTab('login'); } catch (_) {}
+  });
+}
+if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
 </script>
 </body>
 </html>
