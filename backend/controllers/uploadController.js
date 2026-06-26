@@ -50,6 +50,7 @@ async function createUpload(req, res, next) {
           pages: procResult.pages,
           cards: procResult.cards,
           leads: procResult.leadIds?.length || 0,
+          leadIds: procResult.leadIds || [], // used by the two-sided merge flow
         });
       } catch (e) {
         // Upload record exists but processing failed; status already set to FAILED

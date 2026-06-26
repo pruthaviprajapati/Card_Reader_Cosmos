@@ -621,8 +621,17 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
             <button class="dz-btn" id="btnSelectFiles2"><i class="fa-solid fa-folder-open"></i>Browse Files</button>
           </div>
           <input type="file" id="fileInput2" multiple accept="image/*,application/pdf" class="upload-hidden">
-          <button style="width:100%;padding:11px;background:var(--teal);border:none;border-radius:var(--r);color:#000;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;font-family:var(--sans)" onclick="processAll()">
-            <i class="fa-solid fa-wand-magic-sparkles" style="margin-right:6px"></i>Process All with Claude AI
+          <button style="width:100%;padding:11px;background:var(--teal);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;font-family:var(--sans)" onclick="processAll()">
+            <i class="fa-solid fa-wand-magic-sparkles" style="margin-right:6px"></i>Process All
+          </button>
+        </div>
+
+        <div class="set-panel" style="margin-top:14px">
+          <div class="set-title"><i class="fa-solid fa-clone" style="color:var(--teal);margin-right:6px"></i>Two-Sided Card (Front + Back → one lead)</div>
+          <div class="hint" style="margin:8px 0 12px">Some cards have details on both sides. Pick the <b>front</b> and <b>back</b> photos of the <b>same</b> card — they'll be read and combined into a <b>single</b> lead.</div>
+          <input type="file" id="twoSidedInput" multiple accept="image/*" class="upload-hidden">
+          <button style="width:100%;padding:11px;background:rgba(47,107,255,.15);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)" onclick="pickTwoSided()">
+            <i class="fa-solid fa-clone" style="margin-right:6px"></i>Select Front + Back Photos
           </button>
         </div>
       </div>
@@ -1182,11 +1191,53 @@ async function doLogout() {
     AUTH_TOKEN = null;
     localStorage.removeItem('cosmos_auth_token');
     S.currentUser = null;
-    S.leads = []; S.duplicates = [];
-    renderAll();
+    // Show the login gate FIRST, so logout always lands on the login page even
+    // if a later render throws.
     showAuthGate();
     switchAuthTab('login');
+    updateUserChip();
+    S.leads = []; S.duplicates = [];
+    try { renderAll(); } catch (_) {}
     toast('Logged out', 's');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   TWO-SIDED CARD  (front + back photos -> one combined lead)
+══════════════════════════════════════════════════════════ */
+function pickTwoSided() {
+  const el = document.getElementById('twoSidedInput');
+  if (el) el.click();
+}
+
+async function uploadTwoSided(files) {
+  if (!files || files.length !== 2) {
+    toast('Select exactly 2 photos — the front and back of one card', 'w', 5000);
+    return;
+  }
+  if (!(BACKEND_ONLINE && AUTH_TOKEN)) { toast('Please sign in first', 'w'); return; }
+  try {
+    toast('Scanning front and back…', 'i', 6000);
+    const res = await API.uploadFiles(files, 'two-sided');
+    const processed = res.processed || [];
+    // Take the first lead produced by each side.
+    const leadIds = [];
+    for (const p of processed) {
+      if (p.leadIds && p.leadIds.length) leadIds.push(p.leadIds[0]);
+    }
+    await loadLeads();
+    if (leadIds.length < 2) {
+      toast(`Read ${leadIds.length} side(s) — couldn't detect a card on both photos. Check your leads.`, 'w', 7000);
+      switchPage('dashboard');
+      return;
+    }
+    // Merge the back (2nd) into the front (1st) -> one combined lead.
+    await API.mergeDuplicate(leadIds[0], leadIds[1]);
+    await loadLeads();
+    toast('Front + back combined into one lead ✓', 's', 5000);
+    switchPage('dashboard');
+  } catch (e) {
+    toast('Two-sided scan failed: ' + e.message, 'e', 6000);
   }
 }
 
@@ -2277,25 +2328,8 @@ async function doLogin() {
   }
 }
 
-async function doLogout() {
-  try {
-    if (BACKEND_ONLINE && AUTH_TOKEN) {
-      await fetch(`${BACKEND_URL}/api/auth/logout`, {
-        method: 'POST',
-        headers: API._headers()
-      }).catch(() => {});
-    }
-  } finally {
-    AUTH_TOKEN = null;
-    localStorage.removeItem('cosmos_auth_token');
-    S.currentUser = null;
-    BACKEND_ONLINE = false;
-    await initBackendConnection();
-    await loadLeads();
-    renderSettingsPage();
-    toast('Logged out successfully', 's');
-  }
-}
+// (Removed a duplicate doLogout that overrode the real one and never showed the
+// login gate — the canonical doLogout is defined earlier, near the auth gate.)
 
 /* ══════════════════════════════════════════════════════════
    NAVIGATION
@@ -2392,6 +2426,10 @@ async function init() {
   });
   ['fileInput','fileInput2'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', e => { addFilesToQueue([...e.target.files]); e.target.value=''; });
+  });
+  document.getElementById('twoSidedInput')?.addEventListener('change', e => {
+    const files = [...e.target.files]; e.target.value='';
+    uploadTwoSided(files);
   });
 
   // Connect to the backend and validate any stored token.
