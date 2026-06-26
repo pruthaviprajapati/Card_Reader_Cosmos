@@ -11,6 +11,14 @@ yarn-error.log*
 .env.*.local
 backend/.env
 
+# ── PHP backend live config (holds DB password, JWT secret, Groq key) ──
+php/api/config.php
+php/api/uploads/
+
+# ── Retired Node/Docker backend (replaced by the PHP backend) ──
+backend/
+docker-compose.yml
+
 # ── Prisma ───────────────────────────────────────────────────
 backend/node_modules/.prisma/
 

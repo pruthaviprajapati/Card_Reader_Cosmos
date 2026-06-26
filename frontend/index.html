@@ -796,14 +796,6 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
     <div id="pg-settings" class="pg">
       <div class="settings-grid">
         <div>
-          <div class="set-panel" style="margin-bottom:14px">
-            <div class="set-title">Claude API Key</div>
-            <div class="set-row"><div class="set-label">API Key</div>
-              <input class="set-input" id="settApiKey" type="password" placeholder="sk-ant-api03-...">
-            </div>
-            <div class="hint">Stored in browser localStorage only. Never sent to any server other than Anthropic. Never committed to source code.</div>
-            <button class="set-btn" style="margin-top:10px" onclick="saveDefaults()">Save Key</button>
-          </div>
           <div class="set-panel">
             <div class="set-title">Change Password</div>
             <div class="set-row"><div class="set-label">Current Password</div>
@@ -876,9 +868,14 @@ const FIELD_MAP = {
    Connects to Node.js backend at BACKEND_URL.
    Falls back to standalone (IndexedDB only) if backend is unreachable.
 ══════════════════════════════════════════════════════════ */
-const PROD_BACKEND = 'https://card-reader-cosmos-1.onrender.com';
+// Same-origin: the PHP API lives under /api on this very domain, so an empty
+// base makes every call relative (/api/..., /health) — no CORS, works on any
+// host/protocol the site is served from.
+const PROD_BACKEND = '';
 const DEV_BACKEND  = 'http://localhost:4000';
-const saved   = localStorage.getItem('cosmos_backend_url');
+let saved = localStorage.getItem('cosmos_backend_url');
+// Drop any stale backend URL left over from the old Render/Node hosting.
+if (saved && /onrender\.com|:4000/i.test(saved)) { saved = null; localStorage.removeItem('cosmos_backend_url'); }
 const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
 let BACKEND_URL;
 if (saved && saved !== DEV_BACKEND) {
@@ -970,13 +967,10 @@ const API = {
     // vision model (Groq/Claude) is actually used.
     for (const f of files) {
       const out = await downscaleImage(f);
-      form.append('files', out, out.name || f.name);
+      // PHP needs the [] suffix to receive multiple files as an array.
+      form.append('files[]', out, out.name || f.name);
     }
     if (source) form.append('source', source);
-    // Pass the Claude API key from the dashboard Settings block to the backend,
-    // which uses it for Claude Vision extraction (falls back to OCR if absent).
-    const ck = localStorage.getItem('cosmos_claude_api_key') || '';
-    if (ck) form.append('claude_key', ck);
     const h = {};
     if (AUTH_TOKEN) h['Authorization'] = `Bearer ${AUTH_TOKEN}`;
     const r = await fetch(`${BACKEND_URL}/api/upload`, { method: 'POST', headers: h, body: form });
@@ -1458,12 +1452,6 @@ async function loadTeamReport() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CLAUDE API KEY — stored in localStorage via Settings page
-══════════════════════════════════════════════════════════ */
-// Set your Claude API key in Settings (stored in localStorage — never committed to source control)
-const CLAUDE_API_KEY = localStorage.getItem('cosmos_claude_api_key') || '';
-
-/* ══════════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════════ */
 const S = {
@@ -1599,76 +1587,6 @@ async function loadDuplicates() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CLAUDE VISION API
-══════════════════════════════════════════════════════════ */
-const VISION_PROMPT = `You are a Business Card Data Extraction Engine for an industrial CRM.
-Extract ALL information visible on this business card image.
-Return ONLY a valid JSON object — no explanation, no markdown.
-
-{
-  "company": "string or null",
-  "website": "URL without http:// or www. — string or null",
-  "gstin": "Indian GST number e.g. 24ABCDE1234F1Z5 — string or null",
-  "address": "full street address — string or null",
-  "city": "string or null",
-  "state": "full state name — derive from GSTIN first 2 digits: 24=Gujarat 27=Maharashtra 29=Karnataka 33=TamilNadu 07=Delhi 36=Telangana 09=UttarPradesh 08=Rajasthan — string or null",
-  "country": "string or null — default India if +91 number or GSTIN",
-  "postalCode": "PIN/postal code — string or null",
-  "linkedin": "LinkedIn URL or handle — string or null",
-  "industry": "industry sector e.g. Manufacturing, Engineering, Automotive — string or null",
-  "contacts": [
-    {
-      "name": "person full name — string or null",
-      "designation": "job title — string or null",
-      "email": "string or null",
-      "phone": "office/direct phone with country code — string or null",
-      "mobile": "mobile/cell number with country code — string or null",
-      "isPrimary": true
-    }
-  ],
-  "confidence": 85
-}
-
-Rules:
-- List every person found on the card in contacts[]
-- First/main person is isPrimary: true, others false
-- Confidence 0-100 integer based on image clarity
-- Never invent data not visible on the card`;
-
-async function callClaudeVision(dataUrl, apiKey) {
-  const m = dataUrl.match(/^data:(.+);base64,(.+)$/);
-  if (!m) throw new Error('Invalid image data');
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json', 'x-api-key':apiKey, 'anthropic-version':'2023-06-01' },
-    body: JSON.stringify({
-      model: 'claude-opus-4-5',
-      max_tokens: 1500,
-      messages: [{
-        role: 'user',
-        content: [
-          { type:'image', source:{ type:'base64', media_type:m[1], data:m[2] } },
-          { type:'text', text: VISION_PROMPT }
-        ]
-      }]
-    })
-  });
-  if (!resp.ok) {
-    const e = await resp.json().catch(()=>({}));
-    if (resp.status === 401) throw new Error('Invalid API key. Update it in Settings.');
-    throw new Error(e.error?.message || `API error ${resp.status}`);
-  }
-  const data = await resp.json();
-  const text = (data.content||[]).map(b=>b.text||'').join('');
-  const jm = text.match(/\{[\s\S]*\}/);
-  if (!jm) throw new Error('No JSON in Claude response');
-  const parsed = JSON.parse(jm[0]);
-  if (!Array.isArray(parsed.contacts)) parsed.contacts = [];
-  if (!parsed.contacts.length) parsed.contacts = [{ name:null, designation:null, email:null, phone:null, mobile:null, isPrimary:true }];
-  return parsed;
-}
-
-/* ══════════════════════════════════════════════════════════
    QUEUE & PROCESSING
 ══════════════════════════════════════════════════════════ */
 function addFilesToQueue(files) {
@@ -1725,66 +1643,12 @@ async function processAll() {
         return;
       } catch (e) {
         pending.forEach(i => { i.status = 'pending'; i.progress = 0; });
-        toast(`Backend upload failed (${e.message}) — falling back to Claude Vision mode`, 'w');
+        toast(`Upload failed: ${e.message}`, 'e');
       }
     }
+  } else {
+    toast('Not connected to server. Please sign in first.', 'e');
   }
-
-  // ── Standalone mode: Claude Vision API in browser ────────────────────────
-  const apiKey = localStorage.getItem('cosmos_claude_api_key') || CLAUDE_API_KEY;
-  if (!apiKey || apiKey.includes('YOUR_KEY') || !apiKey.trim()) {
-    toast('Set your Claude API key in Settings first', 'e');
-    return;
-  }
-  toast(`Processing ${pending.length} file(s) with Claude Vision…`, 'i', 5000);
-
-  for (const item of pending) {
-    item.status = 'running'; item.progress = 20;
-    renderQueue();
-    try {
-      const ai = await callClaudeVision(item.dataUrl, apiKey);
-      item.status = 'done'; item.progress = 100;
-      // Create a lead for each contact on the card
-      for (const contact of ai.contacts) {
-        const lead = {
-          _id: 'l'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-          company: ai.company, website: ai.website, gstin: ai.gstin,
-          address: ai.address, city: ai.city, state: ai.state,
-          country: ai.country||'India', postalCode: ai.postalCode,
-          linkedin: ai.linkedin, industry: ai.industry,
-          email: contact.email, phone: contact.phone,
-          contactName: contact.name, designation: contact.designation, mobile: contact.mobile,
-          contacts: ai.contacts,
-          confidence: ai.confidence||0,
-          status: 'Extracted',
-          sourceFile: item.name,
-          accountStatus: 'New Lead',
-          customerType: 'Prospect',
-          salesBranch: S.defaults.salesBranch||'',
-          assignedTo: S.defaults.assignedTo||'',
-          createdAt: now(), updatedAt: now(),
-          thumbDataUrl: item.type.startsWith('image/') ? item.dataUrl : null,
-        };
-        // Duplicate check (standalone mode)
-        const dup = S.leads.find(l =>
-          (lead.email && l.email && lead.email.toLowerCase() === l.email.toLowerCase()) ||
-          (lead.mobile && l.mobile && lead.mobile === l.mobile)
-        );
-        if (dup) {
-          S.duplicates.push({ a: dup._id, b: lead._id, lead });
-        } else {
-          await persistLead(lead);
-          injectPreview(item);
-        }
-      }
-    } catch(err) {
-      item.status = 'fail'; item.error = err.message;
-      toast(`Error: ${err.message}`, 'e');
-    }
-    renderQueue(); updateStats();
-  }
-  toast(`Done! ${S.leads.filter(l=>l.status==='Extracted').length} extracted leads ready for review.`, 's');
-  renderAll();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -2229,10 +2093,8 @@ function renderExportPreview() {
 function renderSettingsPage() {
   const sb = document.getElementById('settBranch');
   const sa = document.getElementById('settAssigned');
-  const sk = document.getElementById('settApiKey');
   if (sb) sb.value = S.defaults.salesBranch||'';
   if (sa) sa.value = S.defaults.assignedTo||'';
-  if (sk) sk.value = localStorage.getItem('cosmos_claude_api_key') || '';
 
   // Populate backend URL
   const sbu = document.getElementById('settBackendUrl');
@@ -2284,9 +2146,6 @@ function toggleAll(tbodyId, masterCb) {
 function saveDefaults() {
   S.defaults.salesBranch = g('settBranch');
   S.defaults.assignedTo  = g('settAssigned');
-  // Save API key to localStorage (never sent to server, never in source code)
-  const apiKey = g('settApiKey');
-  if (apiKey) localStorage.setItem('cosmos_claude_api_key', apiKey);
   localStorage.setItem('cosmos_defaults', JSON.stringify(S.defaults));
   // Sync export fields
   const eb = document.getElementById('expBranch'); if(eb) eb.value = S.defaults.salesBranch||'';
@@ -2344,7 +2203,7 @@ const PAGE_TITLES = {
   trash:     ['Trash', 'Deleted leads — restore within 30 days'],
   team:      ['Team Lead Report', 'Leads generated by each employee, by date'],
   users:     ['User Management', 'Add, deactivate and set roles for accounts'],
-  settings:  ['Settings', 'Configure API key, password and export defaults'],
+  settings:  ['Settings', 'Change password and configure export defaults'],
 };
 
 function switchPage(page) {

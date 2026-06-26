@@ -1,0 +1,34 @@
+# ============================================================================
+# Cosmos Lead Intelligence Platform — Apache/LiteSpeed rewrite rules
+# Hostinger shared hosting. The PHP API lives in /api; the SPA is index.html.
+# ============================================================================
+RewriteEngine On
+RewriteBase /
+
+# Route the API and the health check to the PHP front controller.
+RewriteRule ^api(/.*)?$            api/index.php [L,QSA]
+RewriteRule ^health/?$             api/index.php [L,QSA]
+
+# Never serve secret/config/source files directly.
+<FilesMatch "\.(env|sql|md|json|lock)$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "^(config|config\.example)\.php$">
+  Require all denied
+</FilesMatch>
+
+# Default document
+DirectoryIndex index.html
+
+# ── Basic hardening + caching ──────────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Upload size headroom for card photos (PHP also set in config)
+<IfModule mod_php.c>
+  php_value upload_max_filesize 12M
+  php_value post_max_size 14M
+</IfModule>
