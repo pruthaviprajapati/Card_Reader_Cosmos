@@ -9,12 +9,13 @@ the same domain, so there is no CORS.
 
 ```
 index.html            ← the single-page app (frontend)
+install.php           ← one-time admin seed, web root so the /api rewrite
+                         does not intercept it (self-deletes after running)
 .htaccess             ← routes /api/* and /health to the PHP front controller
 api/
   index.php           ← router / front controller
   config.php          ← secrets (DB, JWT, Groq key) — NOT in git, upload via FTP
   config.example.php  ← template
-  install.php         ← one-time admin seed (self-deletes)
   lib/                ← db, jwt, helpers, model, validation, groq, duplicates, crm
   routes/             ← auth, users, leads, upload, duplicates, analytics, export
 ```
@@ -28,7 +29,7 @@ api/
    'groq_api_key' => 'gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
    ```
    (Get one free at https://console.groq.com → API Keys.)
-4. **Run the installer once** — open `https://<domain>/api/install.php` in a
+4. **Run the installer once** — open `https://<domain>/install.php` in a
    browser. It creates the admin user and then deletes itself.
 5. **Log in** at `https://<domain>` with the admin email/password from
    `config.php`, then change the password under Settings.
