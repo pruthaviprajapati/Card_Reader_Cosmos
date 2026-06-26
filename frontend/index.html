@@ -627,11 +627,11 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
         </div>
 
         <div class="set-panel" style="margin-top:14px">
-          <div class="set-title"><i class="fa-solid fa-clone" style="color:var(--teal);margin-right:6px"></i>Two-Sided Card (Front + Back → one lead)</div>
-          <div class="hint" style="margin:8px 0 12px">Some cards have details on both sides. Pick the <b>front</b> and <b>back</b> photos of the <b>same</b> card — they'll be read and combined into a <b>single</b> lead.</div>
+          <div class="set-title"><i class="fa-solid fa-clone" style="color:var(--teal);margin-right:6px"></i>Two-Sided Cards (Front + Back → one lead)</div>
+          <div class="hint" style="margin:8px 0 12px">For cards with details on both sides. Pick photos in <b>front, back, front, back…</b> order — each pair is read and combined into <b>one</b> lead. You can do several cards at once (pick an <b>even</b> number, up to ~10 cards / 20 photos).</div>
           <input type="file" id="twoSidedInput" multiple accept="image/*" class="upload-hidden">
           <button style="width:100%;padding:11px;background:rgba(47,107,255,.15);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)" onclick="pickTwoSided()">
-            <i class="fa-solid fa-clone" style="margin-right:6px"></i>Select Front + Back Photos
+            <i class="fa-solid fa-clone" style="margin-right:6px"></i>Select Front + Back Photos (in order)
           </button>
         </div>
       </div>
@@ -1204,31 +1204,54 @@ function pickTwoSided() {
   if (el) el.click();
 }
 
+// Batch two-sided: pick photos in front,back,front,back… order. Each
+// consecutive pair (front+back of one card) is read and merged into ONE lead,
+// so N photos -> N/2 combined leads. Uploads are chunked to stay within the
+// shared-hosting limits (max 20 files / ~14 MB per request).
 async function uploadTwoSided(files) {
-  if (!files || files.length !== 2) {
-    toast('Select exactly 2 photos — the front and back of one card', 'w', 5000);
+  if (!files || files.length < 2) {
+    toast('Select at least 2 photos — the front and back of a card', 'w', 5000);
+    return;
+  }
+  if (files.length % 2 !== 0) {
+    toast(`You picked ${files.length} photos. Pick an even number — front then back for each card, in order.`, 'w', 8000);
     return;
   }
   if (!(BACKEND_ONLINE && AUTH_TOKEN)) { toast('Please sign in first', 'w'); return; }
+
+  const cardCount = files.length / 2;
   try {
-    toast('Scanning front and back…', 'i', 6000);
-    const res = await API.uploadFiles(files, 'two-sided');
-    const processed = res.processed || [];
-    // Take the first lead produced by each side.
-    const leadIds = [];
-    for (const p of processed) {
-      if (p.leadIds && p.leadIds.length) leadIds.push(p.leadIds[0]);
+    toast(`Scanning ${files.length} photos (${cardCount} card${cardCount > 1 ? 's' : ''})…`, 'i', 9000);
+
+    // One lead id per photo, in the exact order picked (null = no card read).
+    const orderedLeadIds = [];
+    const CHUNK = 10; // even, keeps pairs tidy and stays under the per-request limits
+    for (let start = 0; start < files.length; start += CHUNK) {
+      const chunk = files.slice(start, start + CHUNK);
+      const res = await API.uploadFiles(chunk, 'two-sided');
+      const processed = res.processed || [];
+      for (let i = 0; i < chunk.length; i++) {
+        const p = processed[i];
+        orderedLeadIds.push((p && p.leadIds && p.leadIds[0]) ? p.leadIds[0] : null);
+      }
     }
-    await loadLeads();
-    if (leadIds.length < 2) {
-      toast(`Read ${leadIds.length} side(s) — couldn't detect a card on both photos. Check your leads.`, 'w', 7000);
-      switchPage('dashboard');
-      return;
+
+    // Merge each back (odd index) into its front (even index).
+    let combined = 0, partial = 0;
+    for (let i = 0; i + 1 < orderedLeadIds.length; i += 2) {
+      const front = orderedLeadIds[i], back = orderedLeadIds[i + 1];
+      if (front && back) {
+        try { await API.mergeDuplicate(front, back); combined++; }
+        catch (_) { partial++; }
+      } else if (front || back) {
+        partial++; // only one side produced a lead — it stays as its own lead
+      }
     }
-    // Merge the back (2nd) into the front (1st) -> one combined lead.
-    await API.mergeDuplicate(leadIds[0], leadIds[1]);
+
     await loadLeads();
-    toast('Front + back combined into one lead ✓', 's', 5000);
+    let msg = `${combined} card${combined !== 1 ? 's' : ''} combined (front + back → one lead)`;
+    if (partial) msg += `; ${partial} had only one readable side`;
+    toast(msg + ' ✓', combined ? 's' : 'w', 8000);
     switchPage('dashboard');
   } catch (e) {
     toast('Two-sided scan failed: ' + e.message, 'e', 6000);
