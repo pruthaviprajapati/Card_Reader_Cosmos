@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Cosmos Impex — Lead Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Cosmos Card Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0b1220;--sidebar:#0e1526;--panel:#111927;--card:#141f30;--card2:#192336;--inp:#0d1825;
-  --teal:#2f6bff;--teal2:rgba(47,107,255,.12);--teal3:rgba(47,107,255,.22);
+  --teal:#0096a1;--teal2:rgba(0,150,161,.12);--teal3:rgba(0,150,161,.22);
   --green:#22c55e;--green2:rgba(34,197,94,.12);
   --amber:#f59e0b;--amber2:rgba(245,158,11,.12);
   --rose:#ef4444;--rose2:rgba(239,68,68,.12);
   --blue:#3b82f6;--blue2:rgba(59,130,246,.12);
   --w1:#e2eeff;--w2:#8aa0be;--w3:#4a6080;--w4:#1e2d42;
-  --bdr:rgba(255,255,255,.06);--bdr2:rgba(47,107,255,.30);
-  --sans:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+  --bdr:rgba(255,255,255,.06);--bdr2:rgba(0,150,161,.30);
+  --sans:'Saira',sans-serif;--mono:'JetBrains Mono',monospace;
   --r:8px;--r2:12px;--t:.18s ease;
 }
 html{height:100%}
 body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;overflow:hidden;display:flex;flex-direction:column}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(0,196,204,.2);border-radius:2px}
+::-webkit-scrollbar-thumb{background:rgba(0,150,161,.2);border-radius:2px}
 
 .shell{display:flex;height:100vh;overflow:hidden}
 
@@ -35,11 +35,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .sb-logo .cosname span{color:var(--teal)}
 .sb-logo .tagline{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--w3);margin-top:2px;font-weight:500}
 .sb-logo .sub{font-size:9px;color:var(--w3);margin-top:4px;font-family:var(--mono)}
+.cosmos-logo{width:150px;height:auto;display:block}
+.brand-sub{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--w2);margin-top:9px;font-weight:600;font-family:var(--mono)}
+.auth-brand .cosmos-logo{width:210px;margin:0 auto}
+.auth-brand .brand-sub{margin-top:12px;letter-spacing:5px;color:var(--w2)}
 .sb-nav{flex:1;padding:12px 10px}
 .sb-section{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--w3);padding:14px 10px 6px}
 .sb-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:var(--r);color:var(--w2);font-size:13px;font-weight:500;cursor:pointer;transition:var(--t);position:relative;margin-bottom:2px;user-select:none}
 .sb-item:hover{background:rgba(255,255,255,.04);color:var(--w1)}
-.sb-item.active{background:linear-gradient(135deg,rgba(0,196,204,.15),rgba(0,196,204,.06));color:var(--teal);border-left:3px solid var(--teal);padding-left:9px}
+.sb-item.active{background:linear-gradient(135deg,rgba(0,150,161,.15),rgba(0,150,161,.06));color:var(--teal);border-left:3px solid var(--teal);padding-left:9px}
 .sb-item i{width:18px;text-align:center;font-size:14px;flex-shrink:0}
 .sb-badge{margin-left:auto;background:var(--teal);color:#000;font-size:10px;font-weight:700;min-width:20px;height:20px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 5px;font-family:var(--mono)}
 .sb-badge.orange{background:var(--amber)}
@@ -54,13 +58,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .top-btn{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:var(--r);background:rgba(255,255,255,.04);border:1px solid var(--bdr);color:var(--w2);font-size:12px;font-weight:500;cursor:pointer;transition:var(--t);font-family:var(--sans)}
 .top-btn:hover{border-color:var(--bdr2);color:var(--w1)}
 .top-btn.primary{background:var(--teal2);border-color:var(--bdr2);color:var(--teal)}
-.top-btn.primary:hover{background:rgba(0,196,204,.2)}
+.top-btn.primary:hover{background:rgba(0,150,161,.2)}
 .notif-btn{position:relative;width:36px;height:36px;border-radius:var(--r);background:rgba(255,255,255,.04);border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--w2)}
 .notif-btn .badge{position:absolute;top:-5px;right:-5px;background:var(--rose);color:#fff;font-size:8px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:var(--mono)}
 .content{flex:1;overflow-y:auto;padding:20px 22px}
 
 /* ── AUTH GATE (login / register) ── */
-.auth-gate{position:fixed;inset:0;top:0;left:0;right:0;bottom:0;z-index:2000;background:radial-gradient(1200px 600px at 50% -10%,rgba(47,107,255,.12),transparent),linear-gradient(160deg,#0b1220,#0a1830);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.auth-gate{position:fixed;inset:0;top:0;left:0;right:0;bottom:0;z-index:2000;background:radial-gradient(1200px 600px at 50% -10%,rgba(0,150,161,.12),transparent),linear-gradient(160deg,#0b1220,#0a1830);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
 .auth-card{width:100%;max-width:400px;background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r2);padding:32px 28px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
 .auth-brand{text-align:center;margin-bottom:24px}
 .auth-brand .bn{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--w1)}
@@ -112,8 +116,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .fmt-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--mono)}
 .fmt-jpg{background:#e2a800}.fmt-png{background:#0ea5e9}.fmt-pdf{background:#ef4444}
 .dropzone{border:1.5px dashed rgba(255,255,255,.14);border-radius:var(--r2);padding:28px 20px;text-align:center;cursor:pointer;transition:var(--t);margin:12px 0}
-.dropzone:hover{border-color:var(--teal3);background:rgba(0,196,204,.02)}
-.dropzone.drag{border-color:var(--teal);box-shadow:0 0 20px rgba(0,196,204,.1)}
+.dropzone:hover{border-color:var(--teal3);background:rgba(0,150,161,.02)}
+.dropzone.drag{border-color:var(--teal);box-shadow:0 0 20px rgba(0,150,161,.1)}
 .dz-icon{font-size:36px;color:var(--w3);margin-bottom:10px}
 .dz-title{font-size:13px;font-weight:600;color:var(--w1);margin-bottom:4px}
 .dz-sub{font-size:11px;color:var(--w3)}
@@ -141,7 +145,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .preview-card:hover{border-color:var(--bdr2)}
 .preview-card img{width:100%;height:100%;object-fit:cover}
 .preview-card .card-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;font-size:9px;color:var(--w3);text-align:center;font-family:var(--mono);padding:6px}
-.preview-more{background:rgba(0,196,204,.08);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;font-size:11px;color:var(--teal);font-weight:600;cursor:pointer;aspect-ratio:1.75;border-radius:var(--r)}
+.preview-more{background:rgba(0,150,161,.08);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;font-size:11px;color:var(--teal);font-weight:600;cursor:pointer;aspect-ratio:1.75;border-radius:var(--r)}
 .preview-stat{display:flex;align-items:center;justify-content:space-between;padding:10px 0 0;border-top:1px solid var(--bdr);margin-top:10px;font-size:12px;color:var(--w2)}
 .view-all-btn{padding:5px 12px;background:transparent;border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:11px;font-weight:600;cursor:pointer;transition:var(--t);font-family:var(--sans)}
 .view-all-btn:hover{background:var(--teal2)}
@@ -150,7 +154,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .leads-panel{background:var(--panel);border:1px solid var(--bdr);border-radius:var(--r2);overflow:hidden}
 .leads-toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap}
 .leads-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
-.count-badge{background:rgba(0,196,204,.15);border:1px solid var(--bdr2);color:var(--teal);font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px}
+.count-badge{background:rgba(0,150,161,.15);border:1px solid var(--bdr2);color:var(--teal);font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px}
 .search-wrap{position:relative;flex:1;min-width:160px}
 .search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--w3);font-size:12px;pointer-events:none}
 .search-in{width:100%;padding:7px 10px 7px 30px;background:var(--inp);border:1px solid var(--bdr);border-radius:var(--r);color:var(--w1);font-family:var(--mono);font-size:11px;outline:none;transition:border-color var(--t)}
@@ -160,7 +164,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .review-btn{padding:7px 14px;background:rgba(255,255,255,.05);border:1px solid var(--bdr);border-radius:var(--r);color:var(--w1);font-size:12px;font-weight:600;cursor:pointer;transition:var(--t);font-family:var(--sans)}
 .review-btn:hover{border-color:var(--bdr2)}
 .approve-btn{padding:7px 16px;background:var(--teal2);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;transition:var(--t);font-family:var(--sans)}
-.approve-btn:hover{background:rgba(0,196,204,.22)}
+.approve-btn:hover{background:rgba(0,150,161,.22)}
 .leads-table{width:100%;border-collapse:collapse}
 .leads-table th{text-align:left;padding:9px 12px;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--w3);border-bottom:1px solid var(--bdr);background:var(--card);white-space:nowrap}
 .leads-table td{padding:10px 12px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--w2);vertical-align:middle;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -216,8 +220,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 .set-input:focus{border-color:var(--bdr2)}
 .set-input::placeholder{color:var(--w3)}
 .set-btn{padding:8px 18px;background:var(--teal2);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:12px;font-weight:700;cursor:pointer;transition:var(--t);font-family:var(--sans)}
-.set-btn:hover{background:rgba(0,196,204,.22)}
-.col-tag{display:inline-flex;padding:3px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;background:rgba(0,196,204,.08);border:1px solid var(--bdr2);color:var(--teal);margin:2px}
+.set-btn:hover{background:rgba(0,150,161,.22)}
+.col-tag{display:inline-flex;padding:3px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;background:rgba(0,150,161,.08);border:1px solid var(--bdr2);color:var(--teal);margin:2px}
 .hint{font-size:10px;color:var(--w3);margin-top:6px;line-height:1.6}
 
 /* ── EXPORT PAGE ── */
@@ -245,7 +249,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 
 /* ── EDIT MODAL ── */
 .modal-bg{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.75);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center}
-.modal-box{background:var(--card);border:1px solid rgba(0,196,204,.2);border-radius:var(--r2);padding:24px;width:600px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 28px 72px rgba(0,0,0,.6)}
+.modal-box{background:var(--card);border:1px solid rgba(0,150,161,.2);border-radius:var(--r2);padding:24px;width:600px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 28px 72px rgba(0,0,0,.6)}
 .modal-title{font-size:15px;font-weight:700;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
 .modal-close{width:28px;height:28px;border-radius:var(--r);border:1px solid var(--bdr);background:transparent;color:var(--w3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;transition:var(--t);font-family:var(--sans)}
 .modal-close:hover{color:var(--rose);border-color:rgba(239,68,68,.3)}
@@ -266,7 +270,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 
 /* ── DUP MODAL ── */
 .dup-modal-bg{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center}
-.dup-modal{background:var(--card);border:1px solid rgba(0,196,204,.2);border-radius:var(--r2);padding:26px;max-width:440px;width:92%;box-shadow:0 28px 72px rgba(0,0,0,.6)}
+.dup-modal{background:var(--card);border:1px solid rgba(0,150,161,.2);border-radius:var(--r2);padding:26px;max-width:440px;width:92%;box-shadow:0 28px 72px rgba(0,0,0,.6)}
 .dup-modal h3{font-size:14px;font-weight:700;margin-bottom:8px}
 .dup-modal p{font-size:11px;color:var(--w3);line-height:1.7;margin-bottom:18px;font-family:var(--mono)}
 .dup-modal-btns{display:flex;gap:8px}
@@ -349,8 +353,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 <div class="auth-gate" id="authGate" style="display:flex">
   <div class="auth-card">
     <div class="auth-brand">
-      <div class="bn">COSMOS <span>IMPEX</span></div>
-      <div class="bt">Building the Machines that Build Your World</div>
+      <svg class="cosmos-logo" viewBox="0 0 240 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cosmos">
+        <ellipse cx="118" cy="35" rx="110" ry="29" transform="rotate(-15 118 35)" fill="none" stroke="#c2c7cd" stroke-width="4.5" stroke-linecap="round" opacity=".9"/>
+        <text x="116" y="51" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="47" letter-spacing="-1.5" fill="#0096a1">cosmos</text>
+        <text x="208" y="20" font-family="Saira, sans-serif" font-weight="600" font-size="12" fill="#c2c7cd">®</text>
+      </svg>
+      <div class="brand-sub">Card Reader</div>
     </div>
     <div class="auth-tabs">
       <div class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</div>
@@ -375,7 +383,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
       <button class="auth-btn" onclick="submitRegister()">Create Account</button>
     </div>
     <div class="auth-msg" id="authMsg"></div>
-    <div class="auth-foot">Cosmos Impex India Pvt Ltd · Lead Intelligence Platform</div>
+    <div class="auth-foot">Cosmos Card Reader · © Cosmos Impex India Pvt Ltd</div>
   </div>
 </div>
 
@@ -431,9 +439,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
 <!-- ═══ SIDEBAR ═══ -->
 <aside class="sidebar">
   <div class="sb-logo">
-    <div class="cosname">COSMOS <span>IMPEX</span></div>
-    <div class="tagline">Building the Machines that Build Your World</div>
-    <div class="sub">Lead Intelligence Platform</div>
+    <svg class="cosmos-logo" viewBox="0 0 240 70" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cosmos">
+      <ellipse cx="118" cy="35" rx="110" ry="29" transform="rotate(-15 118 35)" fill="none" stroke="#c2c7cd" stroke-width="4.5" stroke-linecap="round" opacity=".9"/>
+      <text x="116" y="51" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="47" letter-spacing="-1.5" fill="#0096a1">cosmos</text>
+      <text x="208" y="20" font-family="Saira, sans-serif" font-weight="600" font-size="12" fill="#c2c7cd">®</text>
+    </svg>
+    <div class="brand-sub">Card Reader</div>
   </div>
   <nav class="sb-nav">
     <div class="sb-item active" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i>Dashboard</div>
@@ -448,15 +459,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
     <div class="sb-item" data-page="settings"><i class="fa-solid fa-gear"></i>Settings</div>
     <div class="sb-item" id="sbLogout" onclick="doLogout()" style="display:none;color:var(--rose)"><i class="fa-solid fa-right-from-bracket"></i>Logout</div>
   </nav>
-  <div class="sb-footer">Cosmos Impex India Pvt Ltd<br>Lead Intelligence Platform<br><span style="color:var(--teal);font-size:8px">CNC Manufacturer since 1987</span></div>
+  <div class="sb-footer">Cosmos Card Reader<br><span style="color:var(--teal);font-size:8px">© Cosmos Impex India Pvt Ltd</span></div>
 </aside>
 
 <!-- ═══ MAIN ═══ -->
 <div class="main">
   <div class="topbar">
     <div class="topbar-left">
-      <h1 id="pageTitle">Cosmos Lead Intelligence Platform</h1>
-      <p id="pageSubtitle">AI-Powered Business Card &amp; Visitor Data Automation</p>
+      <h1 id="pageTitle">Cosmos Card Reader</h1>
+      <p id="pageSubtitle">Scan business cards into leads</p>
     </div>
     <div class="topbar-right">
       <span id="connectionBadge" style="font-family:var(--mono);font-size:11px;margin-right:4px;font-weight:600;display:flex;align-items:center;gap:6px">○ Standalone mode</span>
@@ -475,10 +486,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
     <div id="pg-dashboard" class="pg active">
       <div class="stats-row" id="statsRow">
         <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(59,130,246,.15);color:var(--blue)"><i class="fa-solid fa-folder"></i></div><div class="stat-label">Total Files</div></div><div class="stat-num" id="s-files">0</div><div class="stat-delta" id="sd-files"><i class="fa-solid fa-minus"></i>All time</div></div>
-        <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(0,196,204,.15);color:var(--teal)"><i class="fa-solid fa-id-card"></i></div><div class="stat-label">Cards Processed</div></div><div class="stat-num" id="s-cards">0</div><div class="stat-delta" id="sd-cards"><i class="fa-solid fa-minus"></i>All time</div></div>
+        <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(0,150,161,.15);color:var(--teal)"><i class="fa-solid fa-id-card"></i></div><div class="stat-label">Cards Processed</div></div><div class="stat-num" id="s-cards">0</div><div class="stat-delta" id="sd-cards"><i class="fa-solid fa-minus"></i>All time</div></div>
         <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(34,197,94,.15);color:var(--green)"><i class="fa-solid fa-circle-check"></i></div><div class="stat-label">Approved</div></div><div class="stat-num" id="s-approved">0</div><div class="stat-delta"><i class="fa-solid fa-arrow-up"></i>Ready for CRM</div></div>
         <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(245,158,11,.15);color:var(--amber)"><i class="fa-solid fa-clock-rotate-left"></i></div><div class="stat-label">Pending Review</div></div><div class="stat-num" id="s-pending">0</div><div class="stat-delta" style="color:var(--amber)"><i class="fa-solid fa-clock"></i>Awaiting action</div></div>
-        <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(0,196,204,.15);color:var(--teal)"><i class="fa-solid fa-users"></i></div><div class="stat-label">Total Leads</div></div><div class="stat-num" id="s-leads">0</div><div class="stat-delta"><i class="fa-solid fa-database"></i>In database</div></div>
+        <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(0,150,161,.15);color:var(--teal)"><i class="fa-solid fa-users"></i></div><div class="stat-label">Total Leads</div></div><div class="stat-num" id="s-leads">0</div><div class="stat-delta"><i class="fa-solid fa-database"></i>In database</div></div>
         <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(239,68,68,.15);color:var(--rose)"><i class="fa-solid fa-clone"></i></div><div class="stat-label">Duplicates</div></div><div class="stat-num" id="s-dups">0</div><div class="stat-delta down"><i class="fa-solid fa-triangle-exclamation"></i>Detected</div></div>
       </div>
 
@@ -630,7 +641,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
           <div class="set-title"><i class="fa-solid fa-clone" style="color:var(--teal);margin-right:6px"></i>Two-Sided Cards (Front + Back → one lead)</div>
           <div class="hint" style="margin:8px 0 12px">For cards with details on both sides. Pick photos in <b>front, back, front, back…</b> order — each pair is read and combined into <b>one</b> lead. You can do several cards at once (pick an <b>even</b> number, up to ~10 cards / 20 photos).</div>
           <input type="file" id="twoSidedInput" multiple accept="image/*" class="upload-hidden">
-          <button style="width:100%;padding:11px;background:rgba(47,107,255,.15);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)" onclick="pickTwoSided()">
+          <button style="width:100%;padding:11px;background:rgba(0,150,161,.15);border:1px solid var(--bdr2);border-radius:var(--r);color:var(--teal);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans)" onclick="pickTwoSided()">
             <i class="fa-solid fa-clone" style="margin-right:6px"></i>Select Front + Back Photos (in order)
           </button>
         </div>
@@ -818,7 +829,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--w1);height:100%;ov
   </div><!-- /content -->
 
   <div style="text-align:center;padding:7px;border-top:1px solid var(--bdr);background:var(--sidebar);font-family:var(--mono);font-size:9px;color:var(--teal);flex-shrink:0">
-    Cosmos Impex India Pvt Ltd · Lead Intelligence Platform · Powered by AI Vision
+    Cosmos Card Reader · © Cosmos Impex India Pvt Ltd
   </div>
 </div>
 </div>
@@ -2224,7 +2235,7 @@ async function doLogin() {
    NAVIGATION
 ══════════════════════════════════════════════════════════ */
 const PAGE_TITLES = {
-  dashboard: ['Cosmos Lead Intelligence Platform', 'AI-Powered Business Card & Visitor Data Automation'],
+  dashboard: ['Cosmos Card Reader', 'Scan business cards into leads'],
   upload:    ['Upload Center', 'Add business card images or PDFs'],
   queue:     ['Processing Queue', 'Track AI extraction progress'],
   leads:     ['All Leads', 'Browse, filter and manage extracted leads'],
@@ -2332,7 +2343,7 @@ async function init() {
     switchAuthTab('login');
   }
 
-  console.log('%cCosmos Impex — Lead Intelligence', 'color:#2f6bff;font-weight:bold;font-size:14px');
+  console.log('%cCosmos Card Reader', 'color:#0096a1;font-weight:bold;font-size:14px');
 }
 
 // The gate is visible by default, so even if init() fails (e.g. an iOS-specific
