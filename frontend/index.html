@@ -1225,6 +1225,8 @@ async function uploadTwoSided(files) {
 
     // One lead id per photo, in the exact order picked (null = no card read).
     const orderedLeadIds = [];
+    const t0 = Date.now();
+    let aiMs = 0; // total exact card-read time reported by the server
     const CHUNK = 10; // even, keeps pairs tidy and stays under the per-request limits
     for (let start = 0; start < files.length; start += CHUNK) {
       const chunk = files.slice(start, start + CHUNK);
@@ -1233,6 +1235,7 @@ async function uploadTwoSided(files) {
       for (let i = 0; i < chunk.length; i++) {
         const p = processed[i];
         orderedLeadIds.push((p && p.leadIds && p.leadIds[0]) ? p.leadIds[0] : null);
+        aiMs += (p && p.ms) ? p.ms : 0;
       }
     }
 
@@ -1249,9 +1252,11 @@ async function uploadTwoSided(files) {
     }
 
     await loadLeads();
+    const secs = ((Date.now() - t0) / 1000).toFixed(1);
     let msg = `${combined} card${combined !== 1 ? 's' : ''} combined (front + back → one lead)`;
     if (partial) msg += `; ${partial} had only one readable side`;
-    toast(msg + ' ✓', combined ? 's' : 'w', 8000);
+    msg += ` · ${secs}s` + (aiMs ? ` (AI read ${(aiMs / 1000).toFixed(1)}s)` : '');
+    toast(msg + ' ✓', combined ? 's' : 'w', 8500);
     switchPage('dashboard');
   } catch (e) {
     toast('Two-sided scan failed: ' + e.message, 'e', 6000);
@@ -1642,27 +1647,29 @@ async function processAll() {
 
   // ── Backend mode: POST files directly to Node/OCR pipeline ──────────────
   if (BACKEND_ONLINE) {
-    toast(`Sending ${pending.length} file(s) to backend OCR pipeline…`, 'i', 5000);
+    toast(`Reading ${pending.length} card photo(s)…`, 'i', 5000);
     const fileObjects = pending.map(i => i.fileRef).filter(Boolean);
     if (fileObjects.length) {
       try {
         pending.forEach(i => { i.status = 'running'; i.progress = 30; });
         renderQueue();
         const source = S.defaults.eventSource || '';
+        const t0 = Date.now();
         const result = await API.uploadFiles(fileObjects, source);
+        const secs = ((Date.now() - t0) / 1000).toFixed(1);
         pending.forEach(i => { i.status = 'done'; i.progress = 100; });
         renderQueue();
-        toast(`${result.queued?.length || fileObjects.length} file(s) queued for OCR. Leads will appear after processing.`, 's', 6000);
-        // Poll for processed leads — OCR pipeline takes ~60s per image on Render
-        let _polls = 0;
-        (function pollLeads() {
-          setTimeout(async () => {
-            await loadLeads();
-            if (++_polls < 15) pollLeads(); // keep polling for ~2 min
-            renderAll(); updateStats();
-          }, 8000);
-        })();
-        renderAll(); updateStats();
+        // Show the exact time taken to read the card(s).
+        const proc  = result.processed || [];
+        const leads = proc.reduce((s, p) => s + (p.leads || 0), 0);
+        const aiMs  = proc.reduce((s, p) => s + (p.ms || 0), 0);
+        const aiTxt = aiMs ? ` · AI read ${(aiMs / 1000).toFixed(1)}s` : '';
+        toast(`Read ${leads} lead(s) from ${fileObjects.length} photo(s) in ${secs}s${aiTxt}`, leads ? 's' : 'w', 8000);
+        // PHP processes synchronously, so leads are ready now — load immediately
+        // (plus two light safety reloads).
+        await loadLeads(); renderAll(); updateStats();
+        let _r = 0;
+        (function reload(){ setTimeout(async () => { await loadLeads(); renderAll(); updateStats(); if (++_r < 2) reload(); }, 4000); })();
         return;
       } catch (e) {
         pending.forEach(i => { i.status = 'pending'; i.progress = 0; });

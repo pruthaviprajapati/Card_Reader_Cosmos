@@ -155,13 +155,17 @@ function process_one_upload($user, $file) {
 
     exec_sql('UPDATE uploads SET status=? WHERE id=?', ['EXTRACTING', $uploadId]);
 
+    // Time the actual card read (Groq vision extraction).
+    $t0 = microtime(true);
     try {
         $cards = groq_extract_cards($file['tmp_name'], $mime);
     } catch (Throwable $e) {
+        $readMs = (int) round((microtime(true) - $t0) * 1000);
         exec_sql('UPDATE uploads SET status=?, error=? WHERE id=?', ['FAILED', $e->getMessage(), $uploadId]);
         return ['id' => $uploadId, 'name' => $file['name'], 'status' => 'FAILED',
-                'error' => $e->getMessage(), 'leadIds' => [], 'leads' => 0, 'cards' => 0, 'pages' => 1];
+                'error' => $e->getMessage(), 'leadIds' => [], 'leads' => 0, 'cards' => 0, 'pages' => 1, 'ms' => $readMs];
     }
+    $readMs = (int) round((microtime(true) - $t0) * 1000);
 
     $leadIds = [];
     foreach ($cards as $i => $card) {
@@ -174,8 +178,9 @@ function process_one_upload($user, $file) {
     }
     exec_sql('UPDATE uploads SET status=? WHERE id=?', ['READY_FOR_REVIEW', $uploadId]);
 
+    // 'ms' = exact time taken to read the card(s) on this photo.
     return ['id' => $uploadId, 'name' => $file['name'], 'status' => 'READY_FOR_REVIEW',
-            'pages' => 1, 'cards' => count($cards), 'leads' => count($leadIds), 'leadIds' => $leadIds];
+            'pages' => 1, 'cards' => count($cards), 'leads' => count($leadIds), 'leadIds' => $leadIds, 'ms' => $readMs];
 }
 
 function route_upload() {
