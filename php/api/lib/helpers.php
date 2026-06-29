@@ -83,6 +83,24 @@ function is_admin($user) {
     return $user && isset($user['role']) && $user['role'] === 'ADMIN';
 }
 
+/**
+ * Company access gate: only emails on the allowed domains may register / log in.
+ * Domains come from config (allowed_email_domains); falls back to the two
+ * Cosmos domains. An empty list disables the restriction (allows any email).
+ */
+function allowed_email_domains() {
+    $d = config()['allowed_email_domains'] ?? ['cosmos.in', 'cosmos-cls.in'];
+    return array_map('strtolower', $d);
+}
+
+function email_domain_allowed($email) {
+    $allowed = allowed_email_domains();
+    if (!$allowed) return true; // empty list = no restriction
+    $parts = explode('@', strtolower(trim($email)));
+    if (count($parts) !== 2 || $parts[1] === '') return false;
+    return in_array($parts[1], $allowed, true);
+}
+
 /** Best-effort audit log (never throws). */
 function audit($userId, $action, $entityType, $entityId = null, $metadata = null) {
     try {

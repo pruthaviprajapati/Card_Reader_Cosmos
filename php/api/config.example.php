@@ -19,6 +19,9 @@ return [
     'jwt_expires_sec' => 12 * 60 * 60,           // 12 hours
     'admin_signup_code' => 'CHANGE_ME_SIGNUP_CODE', // empty disables super-admin signup
 
+    // Only these email domains may register / log in. Empty array = allow any.
+    'allowed_email_domains' => ['cosmos.in', 'cosmos-cls.in'],
+
     // ── Groq Llama 4 Vision ─────────────────────────────────────────────
     'groq_api_key' => '',                        // gsk_...  (add before go-live)
     'groq_model'   => 'meta-llama/llama-4-scout-17b-16e-instruct',

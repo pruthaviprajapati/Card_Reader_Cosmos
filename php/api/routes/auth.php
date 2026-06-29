@@ -6,6 +6,9 @@ function route_auth_login() {
     $email = strtolower(trim($b['email'] ?? ''));
     $password = $b['password'] ?? '';
     if (!$email || !$password) error_out('Email and password are required', 400);
+    if (!email_domain_allowed($email)) {
+        error_out('Only company email addresses (@cosmos.in or @cosmos-cls.in) can sign in.', 403);
+    }
 
     $user = q1('SELECT * FROM users WHERE email = ?', [$email]);
     // constant-time-ish: always run a hash compare
@@ -32,6 +35,9 @@ function route_auth_register() {
     $password = $b['password'] ?? '';
     if (!$name || !$email || !$password) error_out('Name, email and password are required', 400);
     if (strlen($password) < 6) error_out('Password must be at least 6 characters', 400);
+    if (!email_domain_allowed($email)) {
+        error_out('Registration is restricted to company email addresses (@cosmos.in or @cosmos-cls.in).', 403);
+    }
 
     $assignedRole = 'REVIEWER';
     if (($b['role'] ?? '') === 'ADMIN' || ($b['role'] ?? '') === 'super') {
