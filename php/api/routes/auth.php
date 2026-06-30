@@ -6,9 +6,6 @@ function route_auth_login() {
     $email = strtolower(trim($b['email'] ?? ''));
     $password = $b['password'] ?? '';
     if (!$email || !$password) error_out('Email and password are required', 400);
-    if (!email_domain_allowed($email)) {
-        error_out('Only company email addresses (@cosmos.in or @cosmos-cls.in) can sign in.', 403);
-    }
 
     $user = q1('SELECT * FROM users WHERE email = ?', [$email]);
     // constant-time-ish: always run a hash compare

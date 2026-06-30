@@ -8,8 +8,7 @@ function db() {
     static $pdo = null;
     if ($pdo !== null) return $pdo;
 
-    $cfg = require __DIR__ . '/../config.php';
-    $d   = $cfg['db'];
+    $d = config()['db'];
     $dsn = "mysql:host={$d['host']};port={$d['port']};dbname={$d['name']};charset=utf8mb4";
 
     try {

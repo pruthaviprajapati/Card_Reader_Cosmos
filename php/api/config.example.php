@@ -22,8 +22,14 @@ return [
     // Only these email domains may register / log in. Empty array = allow any.
     'allowed_email_domains' => ['cosmos.in', 'cosmos-cls.in'],
 
-    // ── Groq Llama 4 Vision ─────────────────────────────────────────────
-    'groq_api_key' => '',                        // gsk_...  (add before go-live)
+    // ── AI Vision (Gemini preferred; Groq is fallback) ──────────────────
+    // Set gemini_api_key to use Google Gemini 2.5 Flash (Google Workspace free).
+    // Leave empty to fall back to Groq Llama 4 Vision.
+    'gemini_api_key' => '',                      // AIzaSy...  (Google AI Studio key)
+    'gemini_model'   => 'gemini-2.5-flash',
+
+    // ── Groq Llama 4 Vision (fallback) ──────────────────────────────────
+    'groq_api_key' => '',                        // gsk_...  (used only if gemini_api_key is empty)
     'groq_model'   => 'meta-llama/llama-4-scout-17b-16e-instruct',
 
     // ── First-run admin (created by install.php) ────────────────────────

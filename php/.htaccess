@@ -5,6 +5,11 @@
 RewriteEngine On
 RewriteBase /
 
+# Pass Authorization header through to PHP-FPM (Hostinger uses FastCGI,
+# which strips auth headers unless explicitly forwarded via env variable).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Route the API and the health check to the PHP front controller.
 RewriteRule ^api(/.*)?$            api/index.php [L,QSA]
 RewriteRule ^health/?$             api/index.php [L,QSA]
@@ -27,8 +32,11 @@ DirectoryIndex index.html
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Upload size headroom for card photos (PHP also set in config)
+# Upload size headroom for card photos.
+# mod_php.c is not available on PHP-FPM; limits are set in .user.ini instead.
 <IfModule mod_php.c>
   php_value upload_max_filesize 12M
   php_value post_max_size 14M
+  php_value memory_limit 256M
+  php_value max_execution_time 150
 </IfModule>

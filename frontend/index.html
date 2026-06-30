@@ -1652,37 +1652,60 @@ async function processAll() {
   const pending = S.queue.filter(i => i.status === 'pending');
   if (!pending.length) { toast('No pending files in queue', 'w'); return; }
 
-  // ── Backend mode: POST files directly to Node/OCR pipeline ──────────────
+  // ── Backend mode: POST files in chunks of 5 to stay under 14 MB/request ──
   if (BACKEND_ONLINE) {
     toast(`Reading ${pending.length} card photo(s)…`, 'i', 5000);
-    const fileObjects = pending.map(i => i.fileRef).filter(Boolean);
-    if (fileObjects.length) {
+    const source = S.defaults.eventSource || '';
+    const CHUNK = 5; // ~5 photos × ≤2 MB = safe under 14 MB post_max_size
+    const t0 = Date.now();
+    let totalLeads = 0, totalAiMs = 0, totalFailed = 0;
+
+    for (let start = 0; start < pending.length; start += CHUNK) {
+      const chunk = pending.slice(start, start + CHUNK);
+      const fileObjects = chunk.map(i => i.fileRef).filter(Boolean);
+      if (!fileObjects.length) continue;
+
+      // Mark this chunk as running
+      chunk.forEach(i => { i.status = 'running'; i.progress = 30; });
+      renderQueue();
+
       try {
-        pending.forEach(i => { i.status = 'running'; i.progress = 30; });
-        renderQueue();
-        const source = S.defaults.eventSource || '';
-        const t0 = Date.now();
         const result = await API.uploadFiles(fileObjects, source);
-        const secs = ((Date.now() - t0) / 1000).toFixed(1);
-        pending.forEach(i => { i.status = 'done'; i.progress = 100; });
-        renderQueue();
-        // Show the exact time taken to read the card(s).
-        const proc  = result.processed || [];
-        const leads = proc.reduce((s, p) => s + (p.leads || 0), 0);
-        const aiMs  = proc.reduce((s, p) => s + (p.ms || 0), 0);
-        const aiTxt = aiMs ? ` · AI read ${(aiMs / 1000).toFixed(1)}s` : '';
-        toast(`Read ${leads} lead(s) from ${fileObjects.length} photo(s) in ${secs}s${aiTxt}`, leads ? 's' : 'w', 8000);
-        // PHP processes synchronously, so leads are ready now — load immediately
-        // (plus two light safety reloads).
-        await loadLeads(); renderAll(); updateStats();
-        let _r = 0;
-        (function reload(){ setTimeout(async () => { await loadLeads(); renderAll(); updateStats(); if (++_r < 2) reload(); }, 4000); })();
-        return;
+        const proc = result.processed || [];
+
+        // Update each item in the chunk with its individual result
+        chunk.forEach((item, idx) => {
+          const p = proc[idx];
+          if (p && p.status !== 'FAILED' && (p.leads || 0) > 0) {
+            item.status = 'done'; item.progress = 100;
+            totalLeads += p.leads || 0;
+          } else if (p && p.status === 'FAILED') {
+            item.status = 'fail'; item.progress = 0;
+            item.error = p.error || 'AI could not read this card';
+            totalFailed++;
+          } else {
+            // Processed but 0 leads extracted (blank card / unreadable)
+            item.status = 'done'; item.progress = 100;
+          }
+          totalAiMs += (p && p.ms) ? p.ms : 0;
+        });
       } catch (e) {
-        pending.forEach(i => { i.status = 'pending'; i.progress = 0; });
-        toast(`Upload failed: ${e.message}`, 'e');
+        chunk.forEach(i => { i.status = 'fail'; i.progress = 0; i.error = e.message; });
+        totalFailed += chunk.length;
       }
+      renderQueue();
     }
+
+    const secs = ((Date.now() - t0) / 1000).toFixed(1);
+    const aiTxt = totalAiMs ? ` · AI read ${(totalAiMs / 1000).toFixed(1)}s` : '';
+    const failTxt = totalFailed ? ` · ${totalFailed} failed` : '';
+    toast(`Read ${totalLeads} lead(s) from ${pending.length} photo(s) in ${secs}s${aiTxt}${failTxt}`,
+          totalLeads ? 's' : 'w', 8000);
+
+    await loadLeads(); renderAll(); updateStats();
+    let _r = 0;
+    (function reload(){ setTimeout(async () => { await loadLeads(); renderAll(); updateStats(); if (++_r < 2) reload(); }, 4000); })();
+    return;
   } else {
     toast('Not connected to server. Please sign in first.', 'e');
   }
@@ -1978,26 +2001,31 @@ function renderQueue() {
   if (!S.queue.length) { if(empty) empty.style.display='block'; if(panel) panel.innerHTML='<div style="text-align:center;padding:28px 0;color:var(--w3);font-size:12px;font-family:var(--mono)" id="queueEmpty"><i class="fa-solid fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.3"></i>No files in queue</div>'; return; }
   if(empty) empty.style.display='none';
 
-  const renderItems = items => items.slice(-5).reverse().map(item => {
+  const buildItem = item => {
     const isPdf = item.type==='application/pdf';
     const pct = item.status==='done'?100:item.status==='fail'?0:item.progress||20;
     const fillColor = item.status==='done'?'var(--green)':item.status==='fail'?'var(--rose)':'var(--teal)';
+    const errTip = item.error ? ` title="${esc(item.error)}"` : '';
     const statusEl = item.status==='done' ? `<div class="qi-status qi-done"><i class="fa-solid fa-check"></i></div>`
-                   : item.status==='fail' ? `<div class="qi-status qi-fail" title="${item.error||''}"><i class="fa-solid fa-xmark"></i></div>`
+                   : item.status==='fail' ? `<div class="qi-status qi-fail"${errTip}><i class="fa-solid fa-xmark"></i></div>`
                    : item.status==='running' ? `<div class="qi-status qi-spin"><i class="fa-solid fa-circle-notch spin-anim"></i></div>` : '';
+    const errLine = item.error ? `<div style="font-size:10px;color:var(--rose);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc(item.error)}</div>` : '';
     return `<div class="queue-item">
       <div class="qi-icon ${isPdf?'qi-pdf':'qi-jpg'}"><i class="fa-solid ${isPdf?'fa-file-pdf':'fa-image'}"></i></div>
       <div class="qi-info">
         <div class="qi-name">${esc(item.name)}</div>
         <div class="qi-meta">${isPdf?'PDF':'Image'} · ${item.status}</div>
+        ${errLine}
         <div class="qi-prog"><div class="qi-fill" style="width:${pct}%;background:${fillColor}"></div></div>
       </div>
       <div class="qi-right"><span class="qi-pct">${pct}%</span>${statusEl}</div>
     </div>`;
-  }).join('');
+  };
 
-  if (panel) panel.innerHTML = renderItems(S.queue);
-  if (fullQ) fullQ.innerHTML = S.queue.length ? renderItems(S.queue) : '<div style="text-align:center;padding:40px;color:var(--w3);font-size:12px;font-family:var(--mono)"><i class="fa-solid fa-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:.3"></i>Queue is empty</div>';
+  // Dashboard panel: show only the 5 most recent items (compact preview)
+  if (panel) panel.innerHTML = [...S.queue].reverse().slice(0, 5).map(buildItem).join('');
+  // Full queue page: show ALL items
+  if (fullQ) fullQ.innerHTML = S.queue.length ? [...S.queue].reverse().map(buildItem).join('') : '<div style="text-align:center;padding:40px;color:var(--w3);font-size:12px;font-family:var(--mono)"><i class="fa-solid fa-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:.3"></i>Queue is empty</div>';
 }
 
 function injectPreview(item) {

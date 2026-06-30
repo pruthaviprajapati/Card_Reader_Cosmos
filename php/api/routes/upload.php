@@ -1,11 +1,44 @@
 <?php
 /**
- * Upload + Groq extraction. Receives multipart files[], runs each through
- * Groq Llama 4 Vision, and persists Card + OcrResult + Lead + Contacts.
+ * Upload + AI extraction. Uses Gemini 2.5 Flash when gemini_api_key is set,
+ * falls back to Groq Llama 4 Vision when groq_api_key is set.
+ * Both engines are kept intact — switch by setting/clearing keys in config.php.
  */
+require_once __DIR__ . '/../lib/gemini.php';
 require_once __DIR__ . '/../lib/groq.php';
 require_once __DIR__ . '/../lib/validation.php';
 require_once __DIR__ . '/../lib/duplicates.php';
+
+/** Returns true if at least one AI engine is configured. */
+function ai_enabled() {
+    return gemini_enabled() || groq_enabled();
+}
+
+/** Returns true if the active engine can handle this file. */
+function ai_can_handle($mime, $size) {
+    if (gemini_enabled()) return gemini_can_handle($mime, $size);
+    return groq_can_handle($mime, $size);
+}
+
+/**
+ * Extract cards — tries Gemini 2.5 Flash first; falls back to Groq Llama 4
+ * automatically if Gemini fails (rate limit, quota, outage).
+ * Returns [cards, engine_label] where engine_label goes into ocr_results.
+ */
+function ai_extract_cards($filePath, $mime) {
+    $c = config();
+    if (gemini_enabled()) {
+        try {
+            $cards = gemini_extract_cards($filePath, $mime);
+            return [$cards, 'gemini-' . ($c['gemini_model'] ?? 'gemini-2.5-flash')];
+        } catch (Throwable $e) {
+            error_log('[cosmos] Gemini failed, falling back to Groq: ' . $e->getMessage());
+            if (!groq_enabled()) throw $e;
+        }
+    }
+    $cards = groq_extract_cards($filePath, $mime);
+    return [$cards, 'groq-' . ($c['groq_model'] ?? 'llama-4-scout')];
+}
 
 /** Normalise $_FILES['files'] (array or single) into a flat list. */
 function normalize_files() {
@@ -112,10 +145,11 @@ function persist_card_lead($upload, $cardIndex, $rawCard, $entities) {
               VALUES (?,?,?,?,?,?,?,?)',
         [$cardId, $upload['id'], 0, $cardIndex, '', 0, $ai, now3()]);
 
+    $engineLabel = $rawCard['_engine'] ?? 'ai-vision';
     exec_sql('INSERT INTO ocr_results (id, cardId, chosenEngine, rawText, confidence, engineResults, createdAt)
               VALUES (?,?,?,?,?,?,?)',
         [uuid_v4(), $cardId, 'MERGED', json_encode($rawCard), $ai,
-         json_encode(['source' => 'groq-vision', 'model' => config()['groq_model']]), now3()]);
+         json_encode(['source' => $engineLabel]), now3()]);
 
     $leadId = uuid_v4();
     exec_sql('INSERT INTO leads (id, cardId, companyId, companyName, website, email, phonePrimary, phoneSecondary,
@@ -146,7 +180,7 @@ function process_one_upload($user, $file) {
 
     $upload = ['id' => $uploadId, 'source' => $_POST['source'] ?? null];
 
-    if (!groq_can_handle($mime, $file['size'])) {
+    if (!ai_can_handle($mime, $file['size'])) {
         exec_sql('UPDATE uploads SET status=?, error=? WHERE id=?',
             ['FAILED', "Unsupported file type or size: $mime {$file['size']}B", $uploadId]);
         return ['id' => $uploadId, 'name' => $file['name'], 'status' => 'FAILED',
@@ -155,10 +189,10 @@ function process_one_upload($user, $file) {
 
     exec_sql('UPDATE uploads SET status=? WHERE id=?', ['EXTRACTING', $uploadId]);
 
-    // Time the actual card read (Groq vision extraction).
+    // Time the actual card read (AI vision extraction).
     $t0 = microtime(true);
     try {
-        $cards = groq_extract_cards($file['tmp_name'], $mime);
+        [$cards, $engineLabel] = ai_extract_cards($file['tmp_name'], $mime);
     } catch (Throwable $e) {
         $readMs = (int) round((microtime(true) - $t0) * 1000);
         exec_sql('UPDATE uploads SET status=?, error=? WHERE id=?', ['FAILED', $e->getMessage(), $uploadId]);
@@ -170,6 +204,7 @@ function process_one_upload($user, $file) {
     $leadIds = [];
     foreach ($cards as $i => $card) {
         try {
+            $card['_engine'] = $engineLabel;
             $entities = entities_from_groq_card($card);
             $leadIds[] = persist_card_lead($upload, $i, $card, $entities);
         } catch (Throwable $e) {
@@ -188,7 +223,7 @@ function route_upload() {
     $user = require_auth(true);
     $files = normalize_files();
     if (!$files) error_out('No files uploaded', 400);
-    if (!groq_enabled()) error_out('GROQ_API_KEY not set in config.php', 503);
+    if (!ai_enabled()) error_out('No AI API key configured in config.php (set gemini_api_key or groq_api_key)', 503);
 
     $processed = [];
     foreach ($files as $f) { $processed[] = process_one_upload($user, $f); }
